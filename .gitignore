@@ -1,0 +1,4 @@
+api/.env
+api/node_modules/.package-lock.json
+api/node_modules/.bin/openai
+api/node_modules/*

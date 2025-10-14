@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Ask Your Video</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --surface: #121820;
+    --border: #1e2a36;
+    --text: #e7eef5;
+    --muted: #93a4b5;
+    --accent: #4ea1ff;
+    --accent2: #7df0c3;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    font-family: Inter, system-ui, sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 40px 20px;
+  }
+  h1 {
+    font-size: 24px;
+    margin-bottom: 16px;
+    background: linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 700px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.3);
+  }
+  .row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  input {
+    flex: 1;
+    padding: 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #0f151c;
+    color: var(--text);
+    font-size: 15px;
+  }
+  button {
+    padding: 14px 18px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), #6f7dff);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover {
+    transform: translateY(-1px);
+  }
+  .answer {
+    margin-top: 16px;
+    background: #0f151c;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .chip {
+    font-size: 13px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #1b2733;
+    border: 1px solid #293a49;
+    color: var(--text);
+  }
+  details {
+    margin-top: 10px;
+    background: #0d141c;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 10px;
+  }
+  summary {
+    cursor: pointer;
+    color: var(--muted);
+  }
+  .snippet {
+    border-top: 1px dashed var(--border);
+    margin-top: 6px;
+    padding-top: 6px;
+    font-size: 14px;
+  }
+  .small {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+  <h1>Ask Your Video</h1>
+  <div class="container">
+    <div class="row">
+      <input id="question" placeholder="Type your question..." />
+      <button id="askBtn">Ask</button>
+    </div>
+    <div id="loading" class="small" style="display:none;">Loading...</div>
+    <div id="answerBox" class="answer" style="display:none;">
+      <div id="answerText"></div>
+      <div class="chips" id="citations"></div>
+      <details>
+        <summary>Show supporting snippets</summary>
+        <div id="snippets"></div>
+      </details>
+    </div>
+  </div>
+
+<script>
+const API_BASE = "http://localhost:3000"; // change if hosted elsewhere
+
+const askBtn = document.getElementById("askBtn");
+const question = document.getElementById("question");
+const answerBox = document.getElementById("answerBox");
+const answerText = document.getElementById("answerText");
+const citationsBox = document.getElementById("citations");
+const snippetsBox = document.getElementById("snippets");
+const loading = document.getElementById("loading");
+
+function setLoading(v){ loading.style.display = v ? "block" : "none"; }
+function setVisible(v){ answerBox.style.display = v ? "block" : "none"; }
+
+askBtn.addEventListener("click", ask);
+question.addEventListener("keydown", e => { if(e.key==="Enter") ask(); });
+
+async function ask() {
+  const q = question.value.trim();
+  if(!q) return alert("Please type a question");
+
+  setLoading(true);
+  setVisible(false);
+
+  try {
+    const res = await fetch(`${API_BASE}/ask`, {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ question: q })
+    });
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    render(data);
+  } catch (err) {
+    alert("Error: " + err.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function render(data){
+  const { answer="", citations=[], support=[] } = data;
+  answerText.textContent = answer || "(No answer)";
+  citationsBox.innerHTML = "";
+  for(const c of citations){
+    const span = document.createElement("span");
+    span.className = "chip";
+    span.textContent = c.label || `[${formatTime(c.start)}–${formatTime(c.end)}]`;
+    citationsBox.appendChild(span);
+  }
+  snippetsBox.innerHTML = "";
+  for(const s of support){
+    const div = document.createElement("div");
+    div.className = "snippet";
+    div.textContent = `[${formatTime(s.start)}–${formatTime(s.end)}] ${s.text}`;
+    snippetsBox.appendChild(div);
+  }
+  setVisible(true);
+}
+
+function formatTime(sec){
+  sec = Math.floor(sec||0);
+  const m = Math.floor(sec/60).toString().padStart(2,"0");
+  const s = Math.floor(sec%60).toString().padStart(2,"0");
+  return `${m}:${s}`;
+}
+</script>
+</body>
+</html>
