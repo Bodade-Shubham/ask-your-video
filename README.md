@@ -111,6 +111,25 @@ python scripts/build_segments.py videos/my-video.mp4
 
 The script loads the requested Whisper model, transcribes the MP4, and writes `api/src/segment.json` with one entry per Whisper segment. Adjust the model size (`--model medium`) if you need higher accuracy and have the hardware.
 
+#### Whisper CLI one-liner
+
+`openai-whisper` installs a `whisper` executable. You can generate JSON directly via:
+
+```bash
+whisper videos/my-video.mp4 \
+  --model small \
+  --output_format json \
+  --output_dir api/src/tmp
+```
+
+This writes `api/src/tmp/my-video.json`, which contains a `segments` array. You can either copy that file to `api/src/segment.json` or run:
+
+```bash
+jq '{segments: .segments}' api/src/tmp/my-video.json > api/src/segment.json
+```
+
+Adjust the `--model` flag as needed (`tiny`, `base`, `small`, `medium`, `large`).
+
 ## 2. Run the API
 
 ```bash
